@@ -1,9 +1,5 @@
-<div align=center>
-  <h1>
-  🪑 3D Volume Generation
-  </h1>
-  <p>
-    <a href=https://mhsung.github.io/kaist-cs492d-fall-2024/ target="_blank"><b>KAIST CS492(D): Diffusion Models and Their Applications (Fall 2024)</b></a><br>
-    Course Project
-  </p>
-</div>
+# CS492
+
+Project for CS492D: Diffusion Models - 3D Volume Generation Task
+
+![Image](https://github.com/user-attachments/assets/5feac4f1-34cf-4ab2-bee4-ab802158de81)
