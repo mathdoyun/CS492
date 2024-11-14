@@ -62,6 +62,7 @@ class TimeLinear(nn.Module):
     def forward(self, x: torch.Tensor, t: torch.Tensor):
         x = self.fc(x)
         alpha = self.time_embedding(t).view(-1, self.dim_out)
+        alpha = alpha.unsqueeze(1)
 
         return alpha * x
 

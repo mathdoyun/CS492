@@ -82,6 +82,8 @@ class DiffusionModule(nn.Module):
         """
         if noise is None:
             noise = torch.randn_like(x0.float())
+        x0 = x0.to(self.device)
+        noise = noise.to(self.device)
 
         ######## TODO ########
         # DO NOT change the code outside this part.
@@ -151,7 +153,7 @@ class DiffusionModule(nn.Module):
     @torch.no_grad()
     def ddim_p_sample(self, xt, t, t_prev, eta=0.0):
         """
-        One step denoising function of DDIM: $x_t{\tau_i}$ -> $x_{\tau{i-1}}$.
+        One step denoising function of DDIM: $x_{\tau_i}$ -> $x_{\tau{i-1}}$.
 
         Input:
             xt (`torch.Tensor`): noisy data at timestep $\tau_i$.
@@ -170,8 +172,18 @@ class DiffusionModule(nn.Module):
             alpha_prod_t_prev = extract(self.var_scheduler.alphas_cumprod, t_prev, xt)
         else:
             alpha_prod_t_prev = torch.ones_like(alpha_prod_t)
-
-        x_t_prev = xt
+        
+        sqrt_alpha_prod_t = torch.sqrt(alpha_prod_t)
+        sqrt_alpha_prod_t_prev = torch.sqrt(alpha_prod_t_prev)
+        sqrt_one_minus_alpha_prod_t = torch.sqrt(1-alpha_prod_t)
+        sqrt_one_minus_alpha_prod_t_prev = torch.sqrt(1-alpha_prod_t_prev)
+        sqrt_one_minus_alpha_ratio = torch.sqrt(1-alpha_prod_t/alpha_prod_t_prev)
+        eps_theta = self.network(xt, t)
+        z = torch.randn_like(xt)
+        
+        x0_pred = (xt - sqrt_one_minus_alpha_prod_t * eps_theta) / sqrt_alpha_prod_t
+        sigma = eta * sqrt_one_minus_alpha_prod_t_prev / sqrt_one_minus_alpha_prod_t * sqrt_one_minus_alpha_ratio
+        x_t_prev = sqrt_alpha_prod_t_prev * x0_pred + torch.sqrt(1-alpha_prod_t_prev-sigma**2) * eps_theta + sigma * z
 
         ######################
         return x_t_prev
@@ -202,9 +214,12 @@ class DiffusionModule(nn.Module):
         timesteps = torch.from_numpy(timesteps)
         prev_timesteps = timesteps - step_ratio
 
-        xt = torch.zeros(shape).to(self.device)
+        xt = torch.randn(shape).to(self.device)
         for t, t_prev in zip(timesteps, prev_timesteps):
-            pass
+            t = t.to(self.device)
+            t_prev = t_prev.to(self.device)
+            if t.item():
+                xt = self.ddim_p_sample(xt, t, t_prev, eta)
 
         x0_pred = xt
 
@@ -232,6 +247,11 @@ class DiffusionModule(nn.Module):
         )
         
         noise = torch.randn_like(x0)
+
+        x0 = x0.to(self.device)
+        t = t.to(self.device)
+        noise = noise.to(self.device)
+
         xt = self.q_sample(x0, t, noise)
         predicted_noise = self.network(xt, t)
         loss = F.mse_loss(predicted_noise, noise)
